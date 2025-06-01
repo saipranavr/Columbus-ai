@@ -3,3 +3,4 @@ pydantic>=2.0.0
 google-genai==1.18.0
 uvicorn
 python-dotenv==1.0.0
+moviepy==1.0.3
