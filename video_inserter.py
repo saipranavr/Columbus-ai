@@ -1,5 +1,5 @@
 from moviepy.editor import VideoFileClip, CompositeVideoClip
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Tuple
 import os
 from urllib.parse import unquote
 
@@ -80,7 +80,7 @@ class VideoInserter:
     def insert_multiple_videos(
         self,
         main_video_path: str,
-        video_timestamps: Dict[str, float],
+        video_timestamps: List[Tuple[str, float]],
         output_path: str,
         insert_duration: float = 3.0  # Default duration for inserted videos
     ) -> str:
@@ -89,7 +89,7 @@ class VideoInserter:
         
         Args:
             main_video_path (str): Path to the main video file
-            video_timestamps (Dict[str, float]): Dictionary mapping video paths to their insertion timestamps
+            video_timestamps (List[Tuple[str, float]]): List of tuples containing (video_path, timestamp)
             output_path (str): Path where the output video should be saved
             insert_duration (float): Duration in seconds for each inserted video (default: 3.0)
             
@@ -106,8 +106,15 @@ class VideoInserter:
         # Create a list to hold all video clips
         video_clips = [main_video]
         
-        # Add each video at its specified timestamp
-        for video_path, timestamp in video_timestamps.items():
+        # Group timestamps by video path
+        video_paths = {}
+        for video_path, timestamp in video_timestamps:
+            if video_path not in video_paths:
+                video_paths[video_path] = []
+            video_paths[video_path].append(timestamp)
+        
+        # Add each video at its specified timestamps
+        for video_path, timestamps in video_paths.items():
             # Clean the video path
             clean_path = self._clean_path(video_path)
             insert_video = VideoFileClip(clean_path)
@@ -115,8 +122,10 @@ class VideoInserter:
             # Limit the duration of the inserted video
             insert_video = insert_video.subclip(0, min(insert_duration, insert_video.duration))
             
-            insert_video = insert_video.set_start(timestamp)
-            video_clips.append(insert_video)
+            # Create a clip for each timestamp
+            for timestamp in timestamps:
+                clip = insert_video.set_start(timestamp)
+                video_clips.append(clip)
         
         # Composite all videos
         final_video = CompositeVideoClip(video_clips)
