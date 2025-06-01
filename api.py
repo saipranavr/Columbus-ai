@@ -9,6 +9,7 @@ from gemini_fetch import generate_final_script, discover_videos_and_initial_info
 from video_search import create_video_url_mapping
 from video_inserter import VideoInserter
 from typing import Optional, Dict, List, Tuple
+from moviepy.editor import VideoFileClip
 
 app = FastAPI(title="Travel Video Generator API")
 
@@ -105,47 +106,9 @@ class VideoResponse(BaseModel):
 @app.post("/generate-video", response_model=VideoResponse)
 async def generate_video(request: VideoRequest):
     try:
-        # Step 1: Generate the travel script
-        print(f"📝 Generating travel script for {request.city_name}...")
-        
-        # Get video information
-        discovered_video_info = discover_videos_and_initial_info(
-            request.city_name,
-            request.local_language or "English"
-        )
-        
-        if not discovered_video_info:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Could not find video information for {request.city_name}"
-            )
-        
-        # Generate detailed summaries
-        detailed_summaries = generate_detailed_summaries(
-            discovered_video_info,
-            request.city_name,
-            request.local_language or "English"
-        )
-        
-        if not detailed_summaries:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Could not generate summaries for {request.city_name}"
-            )
-        
-        # Generate final script
-        final_script = generate_final_script(detailed_summaries, request.city_name)
-        
-        if not final_script:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Could not generate final script for {request.city_name}"
-            )
-            
-        # TESTING: Trim script to 25 words
-        words = final_script.split()
-        final_script = ' '.join(words[:100])
-        print("📝 TESTING: Trimmed script to 25 words:", final_script)
+        # TESTING: Use hardcoded script
+        final_script = """Hey globetrotters! Welcome back to the channel! Today, we're diving headfirst into one of the world's most iconic cities: London! [Show vibrant montage of London landmarks] Get ready for a whirlwind tour packed with famous sights, delicious food, and some seriously cool hidden gems. First up, the must-see landmarks. [Show footage of Buckingham Palace] Buckingham Palace, of course! Did you know that the State Rooms, where the Queen would receive guests, are only open to the public during the summer months? Definitely worth a visit if you're planning a summer trip. [Show footage of Houses of Parliament and Big Ben]"""
+        print("📝 Using test script:", final_script)
         
         # Clean the script by removing bracketed text
         cleaned_script = clean_script(final_script)
@@ -154,30 +117,20 @@ async def generate_video(request: VideoRequest):
         # Create mapping between cleaned script positions and bracketed text
         script_mapping = create_script_mapping(final_script, cleaned_script)
         print("🗺️ Script mapping:", script_mapping)
-        print("📝 Original script with brackets:", final_script)
-        print("📝 Cleaned script:", cleaned_script)
         
-        # Step 2: Generate video from the script
-        print("🎥 Generating video from script...")
-        ttv = TextToVideo()
-        
-        def status_callback(status: str):
-            print(f"🔄 Video Status: {status}")
-        
-        # Generate video asynchronously
-        result = await ttv.generate_video_async(
-            text=cleaned_script,
-            avatar_id="emily_primary",
-            on_status_update=status_callback
-        )
-        
-        # Step 3: Download the talking head video
-        print("📥 Downloading talking head video...")
+        # TESTING: Use existing talking head video
+        print("🎥 Using existing talking head video...")
         output_dir = "output"
         os.makedirs(output_dir, exist_ok=True)
         talking_head_path = os.path.join(output_dir, "talking_head.mp4")
-        talking_head_url = download_video(result['video']['url'], talking_head_path)
-        print(f"✅ Talking head video downloaded to: {talking_head_url}")
+        talking_head_url = f"file://{os.path.abspath(talking_head_path)}"
+        print(f"✅ Using talking head video at: {talking_head_url}")
+        
+        # Get talking head video duration
+        main_video = VideoFileClip(talking_head_path)
+        video_duration = main_video.duration
+        main_video.close()
+        print(f"⏱️ Talking head video duration: {video_duration}s")
         
         # Step 4: Create video URL mapping
         print("🔍 Creating video URL mapping...")
@@ -187,11 +140,17 @@ async def generate_video(request: VideoRequest):
         # Step 5: Prepare videos for insertion
         print("📥 Preparing videos for insertion...")
         video_timestamps = []
+        
+        # Calculate total words in cleaned script
+        total_words = len(cleaned_script.split())
+        print(f"📝 Total words in script: {total_words}")
+        
         for position, local_path in video_url_mapping.items():
             if local_path:
-                # Calculate timestamp (roughly 1 word per second)
-                timestamp = position * 1.0
-                print(f"⏱️ Position {position} -> Timestamp {timestamp}s -> Path: {local_path}")
+                # Calculate timestamp based on word position and video duration
+                # Distribute timestamps evenly across the video duration
+                timestamp = (position / total_words) * video_duration
+                print(f"⏱️ Position {position}/{total_words} -> Timestamp {timestamp:.2f}s -> Path: {local_path}")
                 
                 # Convert local path to file:// URL
                 file_url = f"file://{os.path.abspath(local_path)}"
