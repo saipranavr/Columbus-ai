@@ -15,7 +15,7 @@ if not GEMINI_API_KEY:
 # Configure the Gemini model
 # IMPORTANT: Ensure this model ID is valid and accessible in your environment.
 # The user requested "gemini-1.5-flash-preview-0514".
-MODEL_NAME = "gemini-2.5-flash-preview-05-20" # User specified this model
+MODEL_NAME = "gemini-2.5-pro-preview-05-06" # User specified this model
 
 
 # Standard safety settings
@@ -54,7 +54,8 @@ def call_gemini_api(prompt_text, task_description="task"):
     """
     print(f"\n🤖 Sending prompt to Gemini for: {task_description}...")
     try:
-        response = model.generate_content(prompt_text)
+        # response = model.generate_content(prompt_text)
+        response = model.generate_content("give me 3 Youtube links for 3 day trip in barcelona")
         # Accessing response.text should be the primary way for simple text models
         if hasattr(response, 'text') and response.text:
             return response.text.strip() # Added strip() here for cleaning
