@@ -6,6 +6,31 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+def approximate_word_time(full_script_text: str, target_word_index: int, total_video_duration_seconds: float) -> float:
+    """
+    Approximates when a word will be spoken in the video based on its position in the script.
+    
+    Args:
+        full_script_text: The complete script text
+        target_word_index: Index of the word in the script
+        total_video_duration_seconds: Total duration of the video in seconds
+        
+    Returns:
+        Approximate time in seconds when the word will be spoken
+    """
+    words = full_script_text.split()  # Simple word tokenization
+    total_words_in_script = len(words)
+
+    if total_words_in_script == 0:
+        return 0  # Or raise error
+    if target_word_index >= total_words_in_script:
+        raise ValueError("Target word index is out of bounds.")
+
+    # target_word_index is how many words have been spoken BEFORE the word we're interested in
+    proportion_spoken = target_word_index / total_words_in_script
+    approx_time = proportion_spoken * total_video_duration_seconds
+    return approx_time
+
 def search_video_url(text: str) -> Optional[Any]:
     """
     Search for a relevant video URL using Sieve Scout Search.
